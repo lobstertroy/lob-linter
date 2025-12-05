@@ -34,7 +34,7 @@ exports.safeList = {
     font: true,
     'font-family': true,
     'font-size': true,
-    'font-style': ['normal', 'italic', 'oblique'],
+    'font-style': true,
     'font-weight': ['normal', 'bold', 'lighter', 'bolder', '100', '200', '300', '400', '500', '600', '700', '800', '900'],
     left: true,
     'letter-spacing': true,
