@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.safeList = void 0;
 exports.safeList = {
+    '-moz-box-sizing': true,
+    '-webkit-box-sizing': true,
+    '-webkit-transform': true,
     background: true,
     'background-color': true,
     'background-image': true,

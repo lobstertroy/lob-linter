@@ -3,6 +3,9 @@ type LobRules = {
 }
 
 export const safeList: LobRules = {
+  '-moz-box-sizing': true,
+  '-webkit-box-sizing': true,
+  '-webkit-transform': true,
   background: true,
   'background-color': true,
   'background-image': true,
