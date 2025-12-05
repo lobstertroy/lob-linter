@@ -1,8 +1,12 @@
 import tempfile
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from controller import run_linter
 
 app = Flask(__name__)
+
+@app.route('/')
+def home():
+  return render_template('index.html')
 
 @app.route('/lint', methods=['POST'])
 def lint():

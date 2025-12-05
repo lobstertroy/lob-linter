@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lob Linter</title>
+    <style>
+      :root {
+        --bg-page: #1E2247; /* Indigo-key */
+        --bg-card: rgba(255, 255, 255, 0.05); /* Semi-transparent white */
+        --text-main: #FFFFFF; /* White */
+        --text-muted: #D8D5FF; /* Indigo 30 */
+        --accent-primary: #27D0E8; /* Cyan (for active states) */
+        --accent-hover: #C4F0F7; /* Cyan 30 */
+        --status-success: #41C23E; /* Vivid green */
+        --status-error: #F15076: /* Vivid pink */
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        text-align: center;
+        background-color: var(--bg-page);
+        color: var(--text-main);
+        min-height: 100vh;
+      }
+
+      h1 {
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+      }
+
+      #drop-zone {
+        border: 3px dashed var(--text-muted);
+        border-radius: 20px;
+        padding: 60px;
+        background-color: var(--bg-card);
+        cursor: pointer;
+        color: var(--text-main);
+      }
+
+      #drop-zone:hover {
+        border-color: var(--accent-primary);
+        background: rgba(39, 208, 232, 0.1);
+        box-shadow: 0 0 15px var(--accent-primary);
+      }
+
+      #results {
+        text-align: left;
+        margin-top: 30px;
+      }
+
+      .error {
+        background: rgba(241, 80, 118, 0.1); /* low opacity pink */
+        color: #FFD1DC;
+        padding: 15px;
+        margin: 8px 0;
+        border-left: 5px solid var(--status-error);
+        border-radius: 4px;
+      }
+
+      .success {
+        background: rgba(65, 194, 62, 0.1); /* low opacity green */
+        color: #D1FFD0;
+        padding: 15px;
+        border-left: 5px solid var(--status-success);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Lob HTML Linter</h1>
+    <p>Drag and drop your HTML file here to check for Lob compatibility.</p>
+
+    <div id="drop-zone">Drop HTML file here<br />(or click to browse)</div>
+    <input
+      type="file"
+      id="file-input"
+      accept="text/html"
+      style="display: none"
+    />
+
+    <div id="results"></div>
+
+    <script>
+      const dropZone = document.getElementById("drop-zone");
+      const fileInput = document.createElement("file-input");
+      const resultsDiv = document.getElementById("results");
+
+      //handle file selection
+      dropZone.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", handleFile(e.target.files[0]));
+
+      //drag and drop handling
+      ["dragenter", "dragover"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropZone.classList.add("hover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, () => {
+          e.preventDefault();
+          dropZone.classList.remove("hover");
+        });
+      });
+
+      //handle file drop
+      dropZone.addEventListener("drop", (e) => {
+        const dt = e.dataTransfer;
+        const file = dt.files[0];
+        handleFile(file);
+      });
+
+      function handleFile(file) {
+        if (!file) return;
+        resultsDiv.innerHTML = "Analyzing...";
+
+        const formData = new FormData();
+        formData.append("html_file", file);
+
+        fetch("/lint", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            resultsDiv.innerHTML = ""; // clear loading message
+
+            if (data.errors && data.errors.length > 0) {
+              data.errors.forEach((error) => {
+                const div = document.createElement("div");
+                div.className = "error";
+                div.textContent = `❌ ${error}`;
+                resultsDiv.appendChild(div);
+              });
+            } else {
+              const div = document.createElement("div");
+              div.className = "success";
+              div.textContent = "✅ No errors found! Your HTML is Lob-ready.";
+              resultsDiv.appendChild(div);
+            }
+          })
+          .catch((error) => {
+            resultsDiv.innerHTML = `<div class="error">Server Error: ${error.message}</div>`;
+          });
+      }
+    </script>
+  </body>
+</html>
