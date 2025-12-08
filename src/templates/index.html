@@ -74,6 +74,14 @@
         background: var(--accent-hover);
       }
 
+      button:disabled {
+        background: var(--text-muted);
+        color: rgba(0, 0, 0, 0.5);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
       #drop-zone {
         display: block;
         border: 3px dashed var(--text-muted);
