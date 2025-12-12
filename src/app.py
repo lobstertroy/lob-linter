@@ -20,7 +20,7 @@ def lint():
 
   if 'html_file' in request.files:
     html_file = request.files['html_file']
-    if file.filename != '':
+    if html_file and html_file.filename != '':
       content_to_write = html_file.read()
 
   if not content_to_write:
