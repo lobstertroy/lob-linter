@@ -54,7 +54,7 @@ def check_merge_variables(text):
     errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{inner_content}}}}}")
 
   # check for square bracket merge variables - catch [name] but not CSS/code like [type="text"] or array[0]
-  for match in re.finditer(r'\[.*?\]', text):
+  for match in re.finditer(r'\[([^\]]+)]', text):
     full_match = match.group(0) #e.g. "[name]" or "[type="text"]"
     inner_content = match.group(1) # e.g. "name" or "type="text""
 
