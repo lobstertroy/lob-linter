@@ -2,6 +2,7 @@ import tempfile
 from flask import Flask, request, jsonify, render_template
 from controller import run_linter
 import requests
+import re
 
 app = Flask(__name__)
 
@@ -9,6 +10,75 @@ def is_url(text):
   """simple check to see if string is valid-looking URL"""
   text = text.strip()
   return text.startswith('http://') or text.startswith('https://')
+
+def check_merge_variables(text):
+  """
+  Scans HTML for Lob merge variable issues:
+  1. Incorrect delimiter usage (<> or [] vs {{}})
+  2. invalid characters inside {{}}
+  3. whitespace inside {{}}
+  """
+  errors = []
+
+  # defined allowlist of safe HTML tags to ignore as bad merge variables
+  VALID_HTML_TAGS = {
+    'html', 'head', 'body', 'title', 'meta', 'link', 'style', 'script', 'noscript', 'div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col', 'a', 'img', 'b', 'i', 'u', 'strong', 'em', 'small', 'big', 'strike', 'blockquote', 'code', 'pre', 'form', 'input', 'textarea', 'button', 'select', 'option', 'label', 'fieldset', 'legend', 'iframe', 'header', 'footer', 'nav', 'section', 'article', 'aside', 'main', 'figure', 'figcaption', '!doctype'
+  }
+
+  # incorrect delimiter usage, smarter check for html tags
+  angle_matches = re.finditer(r'<.*?>', text)
+  for match in angle_matches:
+    full_match = match.group(0) # e.g. "<First Name>" or "<div class='row'"
+    inner_content = match.group(1).strip() # e.g. "First Name" or "div class='row'"
+
+    # skip comments
+    if inner_content.startswith('<!--'):
+      continue
+
+    # extract tag name to check validity
+    # get first word (eg "div class='row'" -> "div", "First Name" -> "first")
+    first_word = inner_content.split()[0].lower()
+
+    # remove starting slash (closing tags)
+    if first_word.startswith('/'):
+      first_word = first_word[1:]
+
+    # remove trailing slash (self-closing tags)
+    first_word = first_word.rstrip('/')
+
+    # is this a known HTML tag?
+    if first_word in VALID_HTML_TAGS:
+      continue # ignore bc it's real HTML
+
+    # if not known HTML, it's a bad merge variable :)
+    errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{inner_content}}}}}")
+
+  square_matches = re.finditer(r'\[.*?\]', text)
+  for match in square_matches:
+    full_match = match.group(0) #e.g. [name]
+    partial_match = full_match.strip('[]')
+    errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{partial_match}}}}}")
+
+  # invalid characters inside {{}}
+  merge_vars = re.finditer(r'\{\{(.*?)\}\}', text)
+  forbidden_pattern = re.compile(r'[\s!"#%\'()*+,/;<=>@[\\\]^`{|}~]')
+
+  for match in merge_vars:
+    original_text = match.group(0) # eg "{{ my variable }}"
+    inner_content = match.group(1) # eg " my variable "
+
+    #is it empty?
+    if not inner_content:
+      errors.append(f"Empty merge variable found: {original_text}")
+      continue
+
+    #check for forbidden chars or whitespace
+    bad_chars = forbidden_pattern.findall(inner_content)
+    if bad_chars:
+      unique_bad = sorted(list(set(bad_chars))) # remove duplicates and sort
+      clean_bad_display = ' '.join([f"'{c}'" if c != ' ' else "'whitespace'" for c in unique_bad])
+      errors.append(f"Invalid merge variable {original_text}: contains {clean_bad_display}")
+    return errors
 
 @app.route('/')
 def home():
@@ -53,6 +123,8 @@ def lint():
     print(f"Temp file created at {temp.name}")
     #run linter
     errors = run_linter(temp.name)
+    mv_errors = check_merge_variables(content_to_write.decode('utf-8'))
+    errors.extend(mv_errors)
     if errors:
       return jsonify({'errors': errors}), 400
     else:
