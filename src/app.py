@@ -26,8 +26,8 @@ def check_merge_variables(text):
   }
 
   # incorrect delimiter usage, smarter check for html tags
-  angle_matches = re.finditer(r'<.*?>', text)
-  for match in angle_matches:
+  for match in re.finditer(r'<([^>]+)>', text):
+    print(match)
     full_match = match.group(0) # e.g. "<First Name>" or "<div class='row'"
     inner_content = match.group(1).strip() # e.g. "First Name" or "div class='row'"
 
@@ -53,9 +53,8 @@ def check_merge_variables(text):
     # if not known HTML, it's a bad merge variable :)
     errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{inner_content}}}}}")
 
-  square_matches = re.finditer(r'\[.*?\]', text)
   # check for square bracket merge variables - catch [name] but not CSS/code like [type="text"] or array[0]
-  for match in square_matches:
+  for match in re.finditer(r'\[.*?\]', text):
     full_match = match.group(0) #e.g. "[name]" or "[type="text"]"
     inner_content = match.group(1) # e.g. "name" or "type="text""
 
@@ -67,10 +66,9 @@ def check_merge_variables(text):
     errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{partial_match}}}}}")
 
   # invalid characters inside {{}}
-  merge_vars = re.finditer(r'\{\{(.*?)\}\}', text)
   forbidden_pattern = re.compile(r'[\s!"#%\'()*+,/;<=>@[\\\]^`{|}~]')
 
-  for match in merge_vars:
+  for match in re.finditer(r'\{\{(.*?)\}\}', text):
     original_text = match.group(0) # eg "{{ my variable }}"
     inner_content = match.group(1) # eg " my variable "
 
