@@ -31,8 +31,8 @@ def check_merge_variables(text):
     full_match = match.group(0) # e.g. "<First Name>" or "<div class='row'"
     inner_content = match.group(1).strip() # e.g. "First Name" or "div class='row'"
 
-    # skip comments
-    if inner_content.startswith('<!--'):
+    # skip comments, inner_content does not include angle bracket `<!--comment-->` becomes `!--comment--`
+    if inner_content.startswith('!--'):
       continue
 
     # extract tag name to check validity
@@ -62,6 +62,22 @@ def check_merge_variables(text):
     if any(char in inner_content for char in ['"', '=', '(', ')', '"']):
       continue
 
+    # confirmed CSS selector, skip
+    if (inner_content == "disabled" or inner_content == "id" or inner_content == "checked" or inner_content == "required"):
+      continue
+
+    # if it's an index, it's likely an array selector. also check if an underscore or dot.
+    if inner_content.isdigit():
+      continue
+
+    if " " in inner_content:
+      errors.append(f"Whitespace found in {full_match}. Please remove whitespace from merge variable.")
+
+
+    if any(not (char.isalnum() or char == '_' or char == '.') for char in inner_content):
+      continue
+
+
     partial_match = full_match.strip('[]')
     errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{partial_match}}}}}")
 
@@ -83,7 +99,7 @@ def check_merge_variables(text):
       unique_bad = sorted(list(set(bad_chars))) # remove duplicates and sort
       clean_bad_display = ' '.join([f"'{c}'" if c != ' ' else "'whitespace'" for c in unique_bad])
       errors.append(f"Invalid merge variable {original_text}: contains {clean_bad_display}")
-    return errors
+  return errors
 
 @app.route('/')
 def home():

@@ -52,6 +52,12 @@ const $ = cheerio.load(htmlContent);
 const errors = [];
 const tasks = []; //store async jobs here
 //regex to match url() values
+// normalize the value so that order of operations doesn't matter -- `underline overline` and `overline underline` are functionally equal
+function normalizeTokens(value) {
+    const splitTokens = value.split(" ").filter(Boolean);
+    splitTokens.sort();
+    return splitTokens.join(" ");
+}
 const validateCss = async (cssSource, sourceName) => {
     try {
         const root = postcss_1.default.parse(cssSource);
@@ -59,6 +65,7 @@ const validateCss = async (cssSource, sourceName) => {
         root.walkDecls((decl) => {
             const property = decl.prop;
             const value = decl.value;
+            const normalizedValue = normalizeTokens(value);
             if (!rules_1.safeList[property]) {
                 errors.push(`Property '${property}' is not allowed in ${sourceName}`);
             }
@@ -68,7 +75,8 @@ const validateCss = async (cssSource, sourceName) => {
                     return;
                 }
                 else if (Array.isArray(allowed)) {
-                    if (!allowed.includes(value)) {
+                    const normalizedAllowList = allowed.map(entry => normalizeTokens(entry));
+                    if (!normalizedAllowList.includes(normalizedValue)) {
                         errors.push(`Value '${value}' is not allowed for '${property}' in ${sourceName}`);
                     }
                 }

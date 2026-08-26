@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import json
+import os
 
 def run_linter(filepath):
   '''
@@ -11,8 +12,9 @@ def run_linter(filepath):
   # we want the result as a string, not bytes
 
   # DONE: fill in the subprocess.run call
+  # determine absolute directory this file lives in
   result = subprocess.run(
-    ["node", "worker.js", filepath],
+    ["node", f"{os.path.dirname(os.path.abspath(__file__))}/worker.js", filepath],
     capture_output = True,
     text = True,
   )
