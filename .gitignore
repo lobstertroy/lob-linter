@@ -8,3 +8,8 @@ __pycache__/
 .DS_Store
 .claude
 TASKS.md
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+

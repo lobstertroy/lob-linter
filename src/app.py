@@ -3,8 +3,20 @@ from flask import Flask, request, jsonify, render_template
 from controller import run_linter
 import requests
 import re
+import os
+import json
 
 app = Flask(__name__)
+merge_variable_rules_filepath = f"{os.path.dirname(os.path.abspath(__file__))}/merge-variable-rules.json"
+with open(merge_variable_rules_filepath, 'r') as f:
+  merge_variable_rules = json.load(f)
+
+def build_forbidden_chars(rules):
+  forbidden_chars = rules.get("forbiddenCharacters")
+  escaped_chars = [f"\{x}" for x in forbidden_chars]
+  whitespace_forbidden = rules.get("whitespaceForbidden")
+  whitespace_piece = "\s" if whitespace_forbidden is True else ""
+  return re.compile(f"[{''.join(escaped_chars)}{whitespace_piece}]")
 
 def is_url(text):
   """simple check to see if string is valid-looking URL"""
@@ -82,7 +94,7 @@ def check_merge_variables(text):
     errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{partial_match}}}}}")
 
   # invalid characters inside {{}}
-  forbidden_pattern = re.compile(r'[\s!"#%\'()*+,/;<=>@[\\\]^`{|}~]')
+  forbidden_pattern = build_forbidden_chars(merge_variable_rules)
 
   for match in re.finditer(r'\{\{(.*?)\}\}', text):
     original_text = match.group(0) # eg "{{ my variable }}"

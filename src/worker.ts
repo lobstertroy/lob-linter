@@ -21,7 +21,7 @@ const tasks: Promise<void>[] = []; //store async jobs here
 //regex to match url() values
 
 // normalize the value so that order of operations doesn't matter -- `underline overline` and `overline underline` are functionally equal
-function normalizeTokens(value) {
+function normalizeTokens(value: string) {
   const splitTokens = value.split(" ").filter(Boolean);
   splitTokens.sort();
   return splitTokens.join(" ");
@@ -72,7 +72,7 @@ async function validateUrl(url: string, sourceName: string) {
   if (!url) return;
 
   // 1. Ignore Merge Variables
-  if (url.match(/^\{\{[\w.]+\}\}$/)) return;
+  if (url.match(/^\{\{.+\}\}$/)) return;
 
   // 2. Check Remote URLs
   if (url.startsWith("http://") || url.startsWith("https://")) {
