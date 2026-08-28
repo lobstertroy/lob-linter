@@ -20,6 +20,13 @@ const tasks: Promise<void>[] = []; //store async jobs here
 
 //regex to match url() values
 
+// normalize the value so that order of operations doesn't matter -- `underline overline` and `overline underline` are functionally equal
+function normalizeTokens(value: string) {
+  const splitTokens = value.split(" ").filter(Boolean);
+  splitTokens.sort();
+  return splitTokens.join(" ");
+}
+
 const validateCss = async (cssSource: string, sourceName: string) => {
   try {
     const root = postcss.parse(cssSource);
@@ -28,6 +35,7 @@ const validateCss = async (cssSource: string, sourceName: string) => {
     root.walkDecls((decl: Declaration) => {
       const property = decl.prop;
       const value = decl.value;
+      const normalizedValue = normalizeTokens(value);
 
       if (!safeList[property]) {
         errors.push(`Property '${property}' is not allowed in ${sourceName}`);
@@ -36,7 +44,8 @@ const validateCss = async (cssSource: string, sourceName: string) => {
         if (typeof allowed === "boolean" && allowed === true) {
           return;
         } else if (Array.isArray(allowed)) {
-          if (!allowed.includes(value)) {
+          const normalizedAllowList = allowed.map(entry => normalizeTokens(entry));
+          if (!normalizedAllowList.includes(normalizedValue)) {
             errors.push(
               `Value '${value}' is not allowed for '${property}' in ${sourceName}`
             );
@@ -63,7 +72,7 @@ async function validateUrl(url: string, sourceName: string) {
   if (!url) return;
 
   // 1. Ignore Merge Variables
-  if (url.match(/^\{\{[\w.]+\}\}$/)) return;
+  if (url.match(/^\{\{.+\}\}$/)) return;
 
   // 2. Check Remote URLs
   if (url.startsWith("http://") || url.startsWith("https://")) {

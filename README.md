@@ -25,13 +25,13 @@ Ensure you have `git`, `python3`, and `nvm` installed on your Raspberry Pi.
 ### 2. Setup
 ```bash
 # Clone the repository
-git clone [https://github.com/lobstertroy/lob-linter.git](https://github.com/lobstertroy/lob-linter.git)
+git clone https://github.com/lobstertroy/lob-linter.git
 cd lob-linter
 
 # Setup Python Environment
 python3 -m venv venv
 source venv/bin/activate
-pip install flask
+pip install -r requirements.txt
 
 # Setup Node Environment
 npm install

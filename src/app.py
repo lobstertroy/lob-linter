@@ -3,8 +3,20 @@ from flask import Flask, request, jsonify, render_template
 from controller import run_linter
 import requests
 import re
+import os
+import json
 
 app = Flask(__name__)
+merge_variable_rules_filepath = f"{os.path.dirname(os.path.abspath(__file__))}/merge-variable-rules.json"
+with open(merge_variable_rules_filepath, 'r') as f:
+  merge_variable_rules = json.load(f)
+
+def build_forbidden_chars(rules):
+  forbidden_chars = rules.get("forbiddenCharacters")
+  escaped_chars = [f"\{x}" for x in forbidden_chars]
+  whitespace_forbidden = rules.get("whitespaceForbidden")
+  whitespace_piece = "\s" if whitespace_forbidden is True else ""
+  return re.compile(f"[{''.join(escaped_chars)}{whitespace_piece}]")
 
 def is_url(text):
   """simple check to see if string is valid-looking URL"""
@@ -31,8 +43,8 @@ def check_merge_variables(text):
     full_match = match.group(0) # e.g. "<First Name>" or "<div class='row'"
     inner_content = match.group(1).strip() # e.g. "First Name" or "div class='row'"
 
-    # skip comments
-    if inner_content.startswith('<!--'):
+    # skip comments, inner_content does not include angle bracket `<!--comment-->` becomes `!--comment--`
+    if inner_content.startswith('!--'):
       continue
 
     # extract tag name to check validity
@@ -62,11 +74,27 @@ def check_merge_variables(text):
     if any(char in inner_content for char in ['"', '=', '(', ')', '"']):
       continue
 
+    # confirmed CSS selector, skip
+    if (inner_content == "disabled" or inner_content == "id" or inner_content == "checked" or inner_content == "required"):
+      continue
+
+    # if it's an index, it's likely an array selector. also check if an underscore or dot.
+    if inner_content.isdigit():
+      continue
+
+    if " " in inner_content:
+      errors.append(f"Whitespace found in {full_match}. Please remove whitespace from merge variable.")
+
+
+    if any(not (char.isalnum() or char == '_' or char == '.') for char in inner_content):
+      continue
+
+
     partial_match = full_match.strip('[]')
     errors.append(f"Incorrect delimiter usage: found {full_match} but expected {{{{{partial_match}}}}}")
 
   # invalid characters inside {{}}
-  forbidden_pattern = re.compile(r'[\s!"#%\'()*+,/;<=>@[\\\]^`{|}~]')
+  forbidden_pattern = build_forbidden_chars(merge_variable_rules)
 
   for match in re.finditer(r'\{\{(.*?)\}\}', text):
     original_text = match.group(0) # eg "{{ my variable }}"
@@ -83,7 +111,7 @@ def check_merge_variables(text):
       unique_bad = sorted(list(set(bad_chars))) # remove duplicates and sort
       clean_bad_display = ' '.join([f"'{c}'" if c != ' ' else "'whitespace'" for c in unique_bad])
       errors.append(f"Invalid merge variable {original_text}: contains {clean_bad_display}")
-    return errors
+  return errors
 
 @app.route('/')
 def home():
